@@ -2,12 +2,16 @@ package com.javanauta.usuario.controller;
 
 import com.javanauta.usuario.business.UsuarioService;
 import com.javanauta.usuario.business.dto.UsuarioDTO;
+import com.javanauta.usuario.infrastructure.entity.Usuario;
+import com.javanauta.usuario.infrastructure.security.JwtUtil;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/usuario")
@@ -15,12 +19,39 @@ import org.springframework.web.bind.annotation.RestController;
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtil jwtUtil;
 
-   @PostMapping
-   public ResponseEntity<UsuarioDTO> salvarUsuario(@RequestBody UsuarioDTO usuarioDTO){
-       return ResponseEntity.ok(usuarioService.salvarUsuario(usuarioDTO));
+    @PostMapping
+    public ResponseEntity<UsuarioDTO> salvarUsuario(@RequestBody UsuarioDTO usuarioDTO) {
+        UsuarioDTO usuarioSalvo = usuarioService.salvarUsuario(usuarioDTO);
+        return ResponseEntity.ok(usuarioSalvo);
+    }
 
-   }
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody UsuarioDTO usuarioDTO) {
 
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        usuarioDTO.getEmail(),
+                        usuarioDTO.getSenha()
+                )
+        );
+
+        String token = jwtUtil.generateToken(authentication.getName());
+
+        return ResponseEntity.ok("Bearer " + token);
+    }
+
+    @GetMapping
+    public ResponseEntity<Usuario> buscarUsuarioPorEmail(@RequestParam("email") String email) {
+        Usuario usuario = usuarioService.buscarUsuarioPorEmail(email);
+        return ResponseEntity.ok(usuario);
+    }
+
+    @DeleteMapping("/{email}")
+    public ResponseEntity<Void> deletaUsuarioPorEmail(@PathVariable String email) {
+        usuarioService.deletaUsuarioPorEmail(email);
+        return ResponseEntity.ok().build();
+    }
 }
-
